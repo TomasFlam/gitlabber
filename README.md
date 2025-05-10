@@ -101,7 +101,7 @@ options:
 -p, --print           print the tree without cloning
 --print-format {json,yaml,tree}
                         print format (default: 'tree')
--n {name,path}, --naming {name,path}
+-n {name,path}, --naming {name,path,branch}
                         the folder naming strategy for projects from the gitlab API attributes (default: "name")
 -m {ssh,http}, --method {ssh,http}
                         the git transport method to use for cloning (default: "ssh")
@@ -182,4 +182,4 @@ export GIT_PYTHON_TRACE='full'
 * If you're going to clone a large number of projects, observe rate limits [for gitlab.com](https://docs.gitlab.com/ee/user/gitlab_com/index.html#gitlabcom-specific-rate-limits/), and [for on-premise installations](https://docs.gitlab.com/ee/security/rate_limits.html).
 
 ## Links
-* Gitlabber [tutorial](https://medium.com/@natskvi/clone-all-your-gitlab-groups-repos-before-starting-to-code-dd559ec5c8d6) by nsk 
+* Gitlabber [tutorial](https://medium.com/@natskvi/clone-all-your-gitlab-groups-repos-before-starting-to-code-dd559ec5c8d6) by nsk

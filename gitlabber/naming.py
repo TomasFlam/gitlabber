@@ -4,6 +4,7 @@ import enum
 class FolderNaming(enum.IntEnum):
     NAME = 1
     PATH = 2
+    BRANCH = 3
 
     def __str__(self) -> str:
         return self.name.lower()

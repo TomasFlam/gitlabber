@@ -164,7 +164,7 @@ class GitlabTree:
                 if not self.is_included(child) or self.is_excluded(child):
                     child.parent = None
 
-    def root_path(self, node: Node) -> str:
+    def root_path(self, node: Node, default_branch: Optional[str]) -> str:
         """Get the root path for a node.
         
         Args:
@@ -173,9 +173,14 @@ class GitlabTree:
         Returns:
             Path string
         """
-        return "/".join(str(n.name) for n in node.path)
+        parts = [str(n.name) for n in node.path]
+        if default_branch:
+            parts.append(default_branch)
+        path = "/".join(parts)
+        return path
 
-    def make_node(self, type: str, name: str, parent: Node, url: str) -> Node:
+    def make_node(self, type: str, name: str, parent: Node, url: str,
+                  *, default_branch: Optional[str] = None) -> Node:
         """Create a new node in the tree.
         
         Args:
@@ -188,7 +193,9 @@ class GitlabTree:
             Created node
         """
         node = Node(name=name, parent=parent, url=url, type=type)
-        node.root_path = self.root_path(node)
+        node.root_path = self.root_path(node, default_branch)
+        if default_branch:
+            node.default_branch = default_branch
         return node
 
     def add_projects(self, parent: Node, projects: List[Project]) -> None:
@@ -211,7 +218,12 @@ class GitlabTree:
                         log.debug("Generated URL: %s", project_url)
                     else:
                         log.debug("Hiding token from project url: %s", project_url)
-                node = self.make_node("project", project_id, parent, url=project_url)
+
+                default_branch = None
+                if self.naming == FolderNaming.BRANCH:
+                    default_branch = getattr(project, "default_branch", None)
+
+                node = self.make_node("project", project_id, parent, url=project_url, default_branch=default_branch)
                 self.progress.show_progress(node.name, 'project')
             except Exception as e:
                 log.error("Failed to add project %s: %s", project.name, str(e))
