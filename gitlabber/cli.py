@@ -91,7 +91,7 @@ def main() -> None:
         url=args.url,
         token=args.token,
         method=args.method,
-        naming=args.naming,
+        naming=FolderNaming.BRANCH if args.protected_branches else args.naming,
         archived=args.archived.api_value,
         includes=includes,
         excludes=excludes,
@@ -274,7 +274,7 @@ def parse_args(argv: Optional[List[str]] = None) -> Namespace:
     parser.add_argument(
         '--protected-branches',
         action='store_true',
-        help='Create work trees for protected branches',
+        help='Create work trees for protected branches. Implies --naming=branch',
     )
     parser.add_argument(
         '--version',
