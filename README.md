@@ -119,6 +119,7 @@ options:
 -U, --user-projects   fetch only user personal projects
 -o options, --git-options options
                         provide additional options as csv for the git command
+--protected-branches  Create work trees for protected branches. Implies --naming=branch
 --version             print the version
 ```
 

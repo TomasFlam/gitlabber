@@ -1,6 +1,6 @@
 from typing import List, Optional, Union, Any, Dict, Iterator
 from gitlab import Gitlab
-from gitlab.exceptions import GitlabGetError, GitlabListError, GitlabAuthenticationError
+from gitlab.exceptions import GitlabGetError, GitlabListError, GitlabAuthenticationError, GitlabHttpError
 from gitlab.v4.objects import Group, Project, User
 from anytree import Node, RenderTree
 from anytree.exporter import DictExporter, JsonExporter
@@ -42,6 +42,7 @@ class GitlabTree:
                  user_projects: bool = False,
                  group_search: Optional[str] = None,
                  git_options: Optional[str] = None,
+                 protected_branches: bool = False,
                  auth_provider: Optional[AuthProvider] = None) -> None:
         """Initialize GitlabTree.
         
@@ -101,6 +102,7 @@ class GitlabTree:
         self.user_projects = user_projects
         self.group_search = group_search
         self.git_options = git_options
+        self.protected_branches = protected_branches
 
     @staticmethod
     def get_ca_path() -> Union[str, bool]:
@@ -180,7 +182,8 @@ class GitlabTree:
         return path
 
     def make_node(self, type: str, name: str, parent: Node, url: str,
-                  *, default_branch: Optional[str] = None) -> Node:
+                  *, default_branch: Optional[str] = None,
+                  protected_branches: Optional[List[str]] = None) -> Node:
         """Create a new node in the tree.
         
         Args:
@@ -196,6 +199,8 @@ class GitlabTree:
         node.root_path = self.root_path(node, default_branch)
         if default_branch:
             node.default_branch = default_branch
+        if protected_branches:
+            node.protected_branches = protected_branches
         return node
 
     def add_projects(self, parent: Node, projects: List[Project]) -> None:
@@ -223,7 +228,19 @@ class GitlabTree:
                 if self.naming == FolderNaming.BRANCH:
                     default_branch = getattr(project, "default_branch", None)
 
-                node = self.make_node("project", project_id, parent, url=project_url, default_branch=default_branch)
+                protected_branches = None
+                if self.protected_branches:
+                    project = self.gitlab.projects.get(project.id)
+                    try:
+                        protected_branches = [branch.name for branch in project.protectedbranches.list()]
+                    except GitlabHttpError as error:
+                        if error.response_code == 403:
+                            log.error("403 error while getting protected branches for project %s: %s", project.name, error.error_message)
+                        else:
+                            raise
+
+                node = self.make_node("project", project_id, parent, url=project_url,
+                                      default_branch=default_branch, protected_branches=protected_branches)
                 self.progress.show_progress(node.name, 'project')
             except Exception as e:
                 log.error("Failed to add project %s: %s", project.name, str(e))

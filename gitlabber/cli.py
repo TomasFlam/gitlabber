@@ -91,7 +91,7 @@ def main() -> None:
         url=args.url,
         token=args.token,
         method=args.method,
-        naming=args.naming,
+        naming=FolderNaming.BRANCH if args.protected_branches else args.naming,
         archived=args.archived.api_value,
         includes=includes,
         excludes=excludes,
@@ -105,7 +105,8 @@ def main() -> None:
         user_projects=args.user_projects,
         group_search=args.group_search,
         git_options=args.git_options,
-        auth_provider=auth_provider
+        protected_branches=args.protected_branches,
+        auth_provider=auth_provider,
     )
     tree.load_tree()
 
@@ -270,6 +271,11 @@ def parse_args(argv: Optional[List[str]] = None) -> Namespace:
         '--git-options',
         metavar=('options'),
         help='Additional options as CSV for the git command (e.g., --depth=1). See: clone/multi_options https://gitpython.readthedocs.io/en/stable/reference.html#')
+    parser.add_argument(
+        '--protected-branches',
+        action='store_true',
+        help='Create work trees for protected branches. Implies --naming=branch',
+    )
     parser.add_argument(
         '--version',
         action='store_true',

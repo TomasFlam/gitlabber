@@ -1,12 +1,14 @@
 from typing import Optional, List
 import logging
 import os
+import os.path
 import sys
 import subprocess
 import git
 from anytree import Node
 from .progress import ProgressBar
 import concurrent.futures
+import fnmatch
 
 log = logging.getLogger(__name__)
 
@@ -83,6 +85,83 @@ def is_git_repo(path: str) -> bool:
         return False
 
 
+def list_branches_matching_patterns(repo: git.Repo, patterns: List[str]) -> List[str]:
+    """
+    Lists branches in the repository that match any of the provided patterns.
+    """
+    expanded_branches = []
+    prefix = 'origin/'
+    for ref in repo.references:
+        if not ref.name.startswith(prefix):
+            continue
+        branch_name = ref.name[len(prefix):]
+        for pattern in patterns:
+            if fnmatch.fnmatch(branch_name, pattern):
+                expanded_branches.append(branch_name)
+                break
+    return expanded_branches
+
+
+def create_worktree(repo: git.Repo,  path: str, branch: str) -> None:
+    """
+    Creates a worktree for the specified branch at the given path.
+
+    Args:
+        repo: The git repository object.
+        branch: The branch name to create a worktree for.
+    """
+    try:
+        repo.git.worktree('add', path, branch)
+    except Exception as e:
+        log.error("Failed to add worktree for branch %s: %s", branch, e)
+
+
+def update_worktree(path: str) -> None:
+    """
+    Updates the worktree at the specified path.
+
+    Args:
+        path: The path to the worktree.
+    """
+    try:
+        git.Repo(path).git.pull()
+    except Exception as e:
+        log.error("Failed to update worktree at %s: %s", path, e)
+
+
+def create_or_update_worktrees(repo: git.Repo, branches: List[str]) -> None:
+    """
+    Creates or updates worktrees for the specified branches in the repository.
+
+    Args:
+        repo: The git repository object.
+        branches: List of branch names to create or update worktrees for.
+    """
+    for branch in branches:
+        if branch == git.HEAD.name:
+            continue
+
+        path = os.path.join(repo.working_tree_dir, os.path.pardir, branch.replace('/', '-'))
+        if os.path.exists(path):
+            update_worktree(path)
+        else:
+            create_worktree(repo, path, branch)
+
+
+def create_or_update_protected_branch_worktrees(repo: git.Repo, action: GitAction) -> None:
+    """
+    Adds worktrees for all branches that match the protected branch patterns.
+
+    Args:
+        repo: The git repository object.
+        protected_branches: List of protected branch names or patterns.
+    """
+    if not hasattr(action.node, 'protected_branches') or not action.node.protected_branches:
+        return
+    branches = list_branches_matching_patterns(repo, action.node.protected_branches)
+    create_or_update_worktrees(repo, branches)
+
+
 def clone_or_pull_project(action: GitAction) -> None:
     if is_git_repo(action.path):
         '''
@@ -104,6 +183,8 @@ def clone_or_pull_project(action: GitAction) -> None:
             sys.exit(0)
         except Exception as e:
             log.error("Error pulling project %s: %s", action.path, str(e), exc_info=True)
+        else:
+            create_or_update_protected_branch_worktrees(repo, action)
     else:
         '''
         Clone new project
@@ -121,11 +202,11 @@ def clone_or_pull_project(action: GitAction) -> None:
         if action.git_options:
             multi_options += action.git_options.split(',')
         try:
-            git.Repo.clone_from(action.node.url, action.path, multi_options=multi_options)
-                
+            repo = git.Repo.clone_from(action.node.url, action.path, multi_options=multi_options)
         except KeyboardInterrupt:
             log.fatal("User interrupted")
             sys.exit(0)
         except Exception as e:
             log.error("Error cloning project %s: %s", action.path, str(e), exc_info=True)
-
+        else:
+            create_or_update_protected_branch_worktrees(repo, action)
