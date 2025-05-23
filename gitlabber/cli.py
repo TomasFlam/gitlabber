@@ -271,6 +271,11 @@ def parse_args(argv: Optional[List[str]] = None) -> Namespace:
         metavar=('options'),
         help='Additional options as CSV for the git command (e.g., --depth=1). See: clone/multi_options https://gitpython.readthedocs.io/en/stable/reference.html#')
     parser.add_argument(
+        '--protected-branches',
+        action='store_true',
+        help='Create work trees for protected branches',
+    )
+    parser.add_argument(
         '--version',
         action='store_true',
         help='print the version')
