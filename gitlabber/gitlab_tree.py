@@ -42,6 +42,7 @@ class GitlabTree:
                  user_projects: bool = False,
                  group_search: Optional[str] = None,
                  git_options: Optional[str] = None,
+                 protected_branches: bool = False,
                  auth_provider: Optional[AuthProvider] = None) -> None:
         """Initialize GitlabTree.
         
@@ -101,6 +102,7 @@ class GitlabTree:
         self.user_projects = user_projects
         self.group_search = group_search
         self.git_options = git_options
+        self.protected_branches = protected_branches
 
     @staticmethod
     def get_ca_path() -> Union[str, bool]:

@@ -105,7 +105,8 @@ def main() -> None:
         user_projects=args.user_projects,
         group_search=args.group_search,
         git_options=args.git_options,
-        auth_provider=auth_provider
+        protected_branches=args.protected_branches,
+        auth_provider=auth_provider,
     )
     tree.load_tree()
 
